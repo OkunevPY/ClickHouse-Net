@@ -15,8 +15,8 @@ namespace ClickHouse.Test.ClickHouseConnectionSettingsTests
         public void ShouldConvertIntoConnectionStringAndBack()
         {
             const string connectionString = "Compress=True;CheckCompressedHash=False;Compressor=lz4;Host=clickhouse;Port=9000;User=default;Password=;SocketTimeout=600000;Database=Test;";
-            var expectedSettings = new ClickHouseConnectionSettings(connectionString);
-            var actualSettings = new ClickHouseConnectionSettings(expectedSettings.ToString());
+            var expectedSettings = new ClickHouseConnectionStringBuilder(connectionString);
+            var actualSettings = new ClickHouseConnectionStringBuilder(expectedSettings.ToString());
 
             Assert.AreEqual(expectedSettings.BufferSize, actualSettings.BufferSize);
             Assert.AreEqual(expectedSettings.SocketTimeout, actualSettings.SocketTimeout);
@@ -34,7 +34,7 @@ namespace ClickHouse.Test.ClickHouseConnectionSettingsTests
         public void ChangePropertyValue()
         {
             const string connectionString = "Compress=True;CheckCompressedHash=False;Compressor=lz4;Host=clickhouse;Port=9000;User=default;Password=;SocketTimeout=600000;Database=Test;";
-            var settings = new ClickHouseConnectionSettings(connectionString)
+            var settings = new ClickHouseConnectionStringBuilder(connectionString)
             {
                 Database = "New"
             };

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 #if !NETCOREAPP11
 using System.Data;
+using System.Data.Common;
 #endif
 using ClickHouse.Ado.Impl;
 
@@ -11,22 +13,90 @@ namespace ClickHouse.Ado
 {
     public class ClickHouseParameter
 #if !NETCOREAPP11
-        : IDbDataParameter
+        : DbParameter
 #endif
     {
-        public DbType DbType { get; set; }
+
+        ClickHouseParameterCollection _collection;
+        string _name = String.Empty;
+        public override DbType DbType { get; set; }
+
+        public override ParameterDirection Direction { get; set; }
 #if !NETCOREAPP11
 
-        ParameterDirection IDataParameter.Direction { get; set; }
-        bool IDataParameter.IsNullable => false;
-        string IDataParameter.SourceColumn { get; set; }
-        DataRowVersion IDataParameter.SourceVersion { get; set; }
-        byte IDbDataParameter.Precision { get; set; }
-        byte IDbDataParameter.Scale { get; set; }
-        int IDbDataParameter.Size { get; set; }
+        public override bool IsNullable { get; set; }
+
+        /// <summary>
+        /// Gets or sets The name of the <see cref="NpgsqlParameter">NpgsqlParameter</see>.
+        /// </summary>
+        /// <value>The name of the <see cref="NpgsqlParameter">NpgsqlParameter</see>.
+        /// The default is an empty string.</value>
+        [DefaultValue("")]
+        public override string ParameterName
+        {
+            get { return _name; }
+            set
+            {
+                _name = value;
+                if (value == null)
+                {
+                    _name = String.Empty;
+                }
+                // no longer prefix with : so that The name returned is The name set
+
+                _name = _name.Trim();
+
+                if (_collection != null)
+                {
+                    _collection.InvalidateHashLookups();
+                }
+            }
+        }
+
+
+        public override string SourceColumn { get; set; }
+
+        public override bool SourceColumnNullMapping { get; set; }
+
+        public override void ResetDbType()
+        {
+            throw new NotImplementedException();
+        }
+
 #endif
-        public string ParameterName { get; set; }
-        public object Value { get; set; }
+        public override int Size { get; set; }
+
+        public override object Value { get; set; }
+
+        /// <summary>
+        /// The name scrubbed of any optional marker
+        /// </summary>
+        internal string CleanName
+        {
+            get
+            {
+                string name = ParameterName;
+                if (name[0] == ':' || name[0] == '@')
+                {
+                    return name.Length > 1 ? name.Substring(1) : string.Empty;
+                }
+                return name;
+
+            }
+        }
+        /// <summary>
+        /// The collection to which this parameter belongs, if any.
+        /// </summary>
+        public ClickHouseParameterCollection Collection
+        {
+            get { return _collection; }
+
+            internal set
+            {
+                _collection = value;
+            }
+        }
+
 
         private string AsSubstitute(object val)
         {
@@ -78,6 +148,16 @@ namespace ClickHouse.Ado
         public override string ToString()
         {
             return $"{ParameterName}({DbType}): {Value}";
+        }
+        public ClickHouseParameter(string parameterName,object value)
+        {
+            ParameterName = parameterName;
+            Value = value;
+        }
+        public ClickHouseParameter()
+        {
+            SourceColumn = String.Empty;
+            Direction = ParameterDirection.Input;
         }
     }
 }

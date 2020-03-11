@@ -12,10 +12,10 @@ namespace ClickHouse.Test
     [TestFixture]
     public class SimpleTests
     {
-        private ClickHouseConnection GetConnection(string cstr= "Compress=False;BufferSize=32768;SocketTimeout=10000;CheckCompressedHash=False;Compressor=lz4;Host=file-server;Port=9000;Database=default;User=test;Password=123")
+        private ClickHouseDbConnection GetConnection(string cstr= "Compress=False;BufferSize=32768;SocketTimeout=10000;CheckCompressedHash=False;Compressor=lz4;Host=file-server;Port=9000;Database=default;User=test;Password=123")
         {
-            var settings = new ClickHouseConnectionSettings(cstr);
-            var cnn = new ClickHouseConnection(settings);
+            var settings = new ClickHouseConnectionStringBuilder(cstr);
+            var cnn = new ClickHouseDbConnection(settings);
             cnn.Open();
             return cnn;
         }
@@ -54,7 +54,7 @@ namespace ClickHouse.Test
             using (var cnn = GetConnection())
             using (var cmd = cnn.CreateCommand("SELECT * FROM `test_data` WHERE user_id IN (@values)"))
             {
-                cmd.Parameters.Add("values", DbType.UInt64, new[] {1L, 2L, 3L});
+                cmd.AddParameter("values", DbType.UInt64, new[] {1L, 2L, 3L});
                 using (var reader = cmd.ExecuteReader())
                 {
                     PrintData(reader);

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 #if !NETCOREAPP11
 using System.Data;
+using System.Data.Common;
 #endif
 using System.IO;
 using System.Linq;
@@ -13,23 +14,24 @@ using ClickHouse.Ado.Impl.Data;
 
 namespace ClickHouse.Ado
 {
-    public class ClickHouseCommand
+    public class ClickHouseDbCommand
 #if !NETCOREAPP11
-        : IDbCommand
+        : DbCommand
 #endif
     {
-        private ClickHouseConnection _clickHouseConnection;
+        private ClickHouseDbConnection _clickHouseConnection;
 
-        public ClickHouseCommand()
+        public ClickHouseDbCommand()
         {
         }
 
-        public ClickHouseCommand(ClickHouseConnection clickHouseConnection)
+        public ClickHouseDbCommand(ClickHouseDbConnection clickHouseConnection)
         {
             _clickHouseConnection = clickHouseConnection;
+            _parameters = new ClickHouseParameterCollection();
         }
 
-        public ClickHouseCommand(ClickHouseConnection clickHouseConnection, string text) : this(clickHouseConnection)
+        public ClickHouseDbCommand(ClickHouseDbConnection clickHouseConnection, string text) : this(clickHouseConnection)
         {
             CommandText = text;
         }
@@ -38,38 +40,43 @@ namespace ClickHouse.Ado
         {
         }
 
-        public void Prepare()
+        public override void Prepare()
         {
             throw new NotSupportedException();
         }
 
-        public void Cancel()
+        public override void Cancel()
         {
             throw new NotSupportedException();
         }
-        public ClickHouseParameter CreateParameter()
+
+        protected override DbParameter CreateDbParameter()
         {
             return new ClickHouseParameter();
         }
+
+        protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior)
+        {
+            return new ClickHouseDataReader(this._clickHouseConnection,behavior);
+        }
 #if !NETCOREAPP11
 
-        IDbDataParameter IDbCommand.CreateParameter()
+        protected override DbTransaction DbTransaction { get; set; }
+
+        public override bool DesignTimeVisible { get; set; } = true;
+
+        protected override DbConnection DbConnection
         {
-            return CreateParameter();
+            get => _clickHouseConnection;
+            set => _clickHouseConnection = (ClickHouseDbConnection)value;
         }
-        IDbConnection IDbCommand.Connection
-        {
-            get { return _clickHouseConnection; }
-            set { _clickHouseConnection = (ClickHouseConnection)value; }
-        }
-        public IDbTransaction Transaction { get; set; }
-        public CommandType CommandType { get; set; }
-        IDataParameterCollection IDbCommand.Parameters => Parameters;
-        public UpdateRowSource UpdatedRowSource { get; set; }
+
+        public override CommandType CommandType { get; set; }
+        public override UpdateRowSource UpdatedRowSource { get; set; }
 
 #endif
 
-        private void Execute(bool readResponse, ClickHouseConnection connection)
+        private void Execute(bool readResponse, ClickHouseDbConnection connection)
         {
             if (connection.State != ConnectionState.Open)
             {
@@ -138,7 +145,7 @@ namespace ClickHouse.Ado
                     {
                         var val = valueList[i];
                         if (val.TypeHint == Parser.ConstType.Parameter)
-                            schema.Columns[i].Type.ValueFromParam(Parameters[val.StringValue]);
+                            schema.Columns[i].Type.ValueFromParam((ClickHouseParameter)Parameters[val.StringValue]);
                         else
                             schema.Columns[i].Type.ValueFromConst(val);
                     }
@@ -156,35 +163,16 @@ namespace ClickHouse.Ado
         private static readonly Regex ParamRegex = new Regex("[@:](?<n>([a-z_][a-z0-9_]*)|[@:])", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private string SubstituteParameters(string commandText)
         {
-            return ParamRegex.Replace(commandText, m => m.Groups["n"].Value == ":" || m.Groups["n"].Value == "@" ? m.Groups["n"].Value : Parameters[m.Groups["n"].Value].AsSubstitute());
+            return ParamRegex.Replace(commandText, m => m.Groups["n"].Value == ":" || m.Groups["n"].Value == "@" ? m.Groups["n"].Value : (Parameters[m.Groups["n"].Value]).AsSubstitute());
         }
 
-        public int ExecuteNonQuery()
+        
+        public override int ExecuteNonQuery()
         {
             Execute(true, _clickHouseConnection);
             return 0;
         }
-#if NETCOREAPP11
-        public ClickHouseDataReader ExecuteReader()
-        {
-            Execute(false);
-            return new ClickHouseDataReader(_clickHouseConnection);
-        }
-#else
-        public IDataReader ExecuteReader()
-        {
-            return ExecuteReader(CommandBehavior.Default);
-        }
-
-        public IDataReader ExecuteReader(CommandBehavior behavior)
-        {
-            var tempConnection = _clickHouseConnection;
-            Execute(false, tempConnection);
-            return new ClickHouseDataReader(tempConnection, behavior);
-        }
-#endif
-
-        public object ExecuteScalar()
+        public override object ExecuteScalar()
         {
             object result = null;
             using (var reader = ExecuteReader())
@@ -198,14 +186,12 @@ namespace ClickHouse.Ado
             return result;
         }
 
-        public ClickHouseConnection Connection
-        {
-            get => _clickHouseConnection;
-            set => _clickHouseConnection = value;
-        }
+        public override string CommandText { get; set; }
+        public override int CommandTimeout { get; set; }
 
-        public string CommandText { get; set; }
-        public int CommandTimeout { get; set; }
-        public ClickHouseParameterCollection Parameters { get; } = new ClickHouseParameterCollection();
+        protected override DbParameterCollection DbParameterCollection { get; } = new ClickHouseParameterCollection();
+
+        private readonly ClickHouseParameterCollection _parameters;
+        public new ClickHouseParameterCollection Parameters => _parameters;
     }
 }

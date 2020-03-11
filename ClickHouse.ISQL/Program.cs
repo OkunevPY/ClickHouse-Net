@@ -84,7 +84,7 @@ namespace ClickHouse.Isql
                 return Help("Missing query to execute");
             var formatter = formatters[format](Console.OpenStandardOutput());
             formatter.Start();
-            using (var cnn = new ClickHouseConnection($"Host={host};Port={port};User={user};Password={pass};Database={db}"))
+            using (var cnn = new ClickHouseDbConnection($"Host={host};Port={port};User={user};Password={pass};Database={db}"))
             {
                 cnn.Open();
                 bool hasOutput = false;

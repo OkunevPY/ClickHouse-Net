@@ -243,7 +243,7 @@ namespace ClickHouse.Ado.Impl
         internal CompressionHelper Compression => new CompressionHelper(this);
         internal DecompressionHelper Decompression => new DecompressionHelper(this);
         #endregion
-        public void Handshake(ClickHouseConnectionSettings connectionSettings)
+        public void Handshake(ClickHouseConnectionStringBuilder connectionSettings)
         {
             _connectionSettings = connectionSettings;
             _compressor = connectionSettings.Compress ? Compressor.Create(connectionSettings):null;
@@ -414,7 +414,7 @@ namespace ClickHouse.Ado.Impl
         }
 
         private static readonly Regex NameRegex = new Regex("^[a-zA-Z_][0-9a-zA-Z_]*$", RegexOptions.Compiled);
-        private ClickHouseConnectionSettings _connectionSettings;
+        private ClickHouseConnectionStringBuilder _connectionSettings;
 
         public static string EscapeName(string str)
         {

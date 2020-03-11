@@ -5,11 +5,11 @@ namespace ClickHouse.Ado.Impl.Compress
 {
     abstract class HashingCompressor : Compressor
     {
-        private readonly ClickHouseConnectionSettings _settings;
+        private readonly ClickHouseConnectionStringBuilder _settings;
         private Stream _baseStream;
         private MemoryStream _uncompressed;
 
-        protected HashingCompressor(ClickHouseConnectionSettings settings)
+        protected HashingCompressor(ClickHouseConnectionStringBuilder settings)
         {
             _settings = settings;
         }

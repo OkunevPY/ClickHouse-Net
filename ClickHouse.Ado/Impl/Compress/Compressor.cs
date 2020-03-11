@@ -11,7 +11,7 @@ namespace ClickHouse.Ado.Impl.Compress
         public abstract Stream BeginDecompression(Stream baseStream);
         public abstract void EndDecompression();
 
-        public static Compressor Create(ClickHouseConnectionSettings settings)
+        public static Compressor Create(ClickHouseConnectionStringBuilder settings)
         {
             switch ((settings.Compressor??"").ToLower())
             {

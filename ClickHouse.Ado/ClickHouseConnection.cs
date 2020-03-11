@@ -1,6 +1,7 @@
 ﻿using System;
 #if !NETCOREAPP11
 using System.Data;
+using System.Data.Common;
 #endif
 using System.IO;
 using System.Net.Sockets;
@@ -9,24 +10,24 @@ using ClickHouse.Ado.Impl.Data;
 
 namespace ClickHouse.Ado
 {
-    public class ClickHouseConnection
+    public class ClickHouseDbConnection
 #if !NETCOREAPP11
-        : IDbConnection
+        : DbConnection
 #endif
     {
-        public ClickHouseConnectionSettings ConnectionSettings { get; private set; }
+        public ClickHouseConnectionStringBuilder ConnectionSettings { get; private set; }
 
-        public ClickHouseConnection()
+        public ClickHouseDbConnection()
         {
         }
 
-        public ClickHouseConnection(ClickHouseConnectionSettings settings)
+        public ClickHouseDbConnection(ClickHouseConnectionStringBuilder settings)
         {
             ConnectionSettings = settings;
         }
-        public ClickHouseConnection(string connectionString)
+        public ClickHouseDbConnection(string connectionString)
         {
-            ConnectionSettings = new ClickHouseConnectionSettings(connectionString);
+            ConnectionSettings = new ClickHouseConnectionStringBuilder(connectionString);
         }
 
         private TcpClient _tcpClient;
@@ -42,7 +43,7 @@ namespace ClickHouse.Ado
             if (_tcpClient != null) Close();
         }
 
-        public void Close()
+        public override void Close()
         {
             /*if (_reader != null)
             {
@@ -89,7 +90,7 @@ namespace ClickHouse.Ado
         }
 
 
-        public void Open()
+        public override void Open()
         {
             if(_tcpClient!=null)throw new InvalidOperationException("Connection already open.");
             _tcpClient=new TcpClient();
@@ -116,45 +117,42 @@ namespace ClickHouse.Ado
             Formatter = new ProtocolFormatter(_stream,ci, ()=>_tcpClient.Client.Poll(ConnectionSettings.SocketTimeout, SelectMode.SelectRead));
             Formatter.Handshake(ConnectionSettings);
         }
-
-        public string ConnectionString
+        public override string ConnectionString
         {
             get { return ConnectionSettings.ToString(); }
-            set { ConnectionSettings=new ClickHouseConnectionSettings(value);}
+            set { ConnectionSettings = new ClickHouseConnectionStringBuilder(value); }
         }
 
-        public int ConnectionTimeout { get; set; }
-        public string Database { get; private set; }
+        public override string Database => ConnectionSettings.Database;
+
+        public override string DataSource { get; }
 #if !NETCOREAPP11
-        public ConnectionState State => Formatter != null ? ConnectionState.Open : ConnectionState.Closed;
+        public override string ServerVersion { get; }
 
-        public IDbTransaction BeginTransaction()
-        {
-            throw new NotSupportedException();
-        }
+        public override ConnectionState State => Formatter != null ? ConnectionState.Open : ConnectionState.Closed;
 
-        public IDbTransaction BeginTransaction(IsolationLevel il)
+        protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
         {
-            throw new NotSupportedException();
+            throw new NotImplementedException();
         }
-        IDbCommand IDbConnection.CreateCommand()
+        protected override DbCommand CreateDbCommand()
         {
-            return new ClickHouseCommand(this);
+            return new ClickHouseDbCommand(this);
         }
 #endif
-        public void ChangeDatabase(string databaseName)
+        public override void ChangeDatabase(string databaseName)
         {
             CreateCommand("USE " + ProtocolFormatter.EscapeName(databaseName)).ExecuteNonQuery();
-            Database=databaseName;
+            ConnectionSettings.Database = databaseName;
         }
 
-        public ClickHouseCommand CreateCommand()
+        public ClickHouseDbCommand CreateCommand()
         {
-            return new ClickHouseCommand(this);
+            return new ClickHouseDbCommand(this);
         }
-        public ClickHouseCommand CreateCommand(string text)
+        public ClickHouseDbCommand CreateCommand(string text)
         {
-            return new ClickHouseCommand(this,text);
+            return new ClickHouseDbCommand(this,text);
         }
     }
 }

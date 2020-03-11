@@ -21,12 +21,12 @@ namespace ClickHouse.Ado
 #if !NETCOREAPP11
         private readonly CommandBehavior _behavior;
 #endif
-        private ClickHouseDbConnection _clickHouseConnection;
+        private ClickHouseConnection _clickHouseConnection;
 
         private Block _currentBlock;
         private int _currentRow;
 
-        internal ClickHouseDataReader(ClickHouseDbConnection clickHouseConnection
+        internal ClickHouseDataReader(ClickHouseConnection clickHouseConnection
 #if !NETCOREAPP11
             , CommandBehavior behavior
 #endif

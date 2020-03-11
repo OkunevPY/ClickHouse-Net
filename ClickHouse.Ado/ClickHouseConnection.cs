@@ -10,22 +10,22 @@ using ClickHouse.Ado.Impl.Data;
 
 namespace ClickHouse.Ado
 {
-    public class ClickHouseDbConnection
+    public class ClickHouseConnection
 #if !NETCOREAPP11
         : DbConnection
 #endif
     {
         public ClickHouseConnectionStringBuilder ConnectionSettings { get; private set; }
 
-        public ClickHouseDbConnection()
+        public ClickHouseConnection()
         {
         }
 
-        public ClickHouseDbConnection(ClickHouseConnectionStringBuilder settings)
+        public ClickHouseConnection(ClickHouseConnectionStringBuilder settings)
         {
             ConnectionSettings = settings;
         }
-        public ClickHouseDbConnection(string connectionString)
+        public ClickHouseConnection(string connectionString)
         {
             ConnectionSettings = new ClickHouseConnectionStringBuilder(connectionString);
         }

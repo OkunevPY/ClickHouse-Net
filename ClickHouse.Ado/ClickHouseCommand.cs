@@ -19,19 +19,19 @@ namespace ClickHouse.Ado
         : DbCommand
 #endif
     {
-        private ClickHouseDbConnection _clickHouseConnection;
+        private ClickHouseConnection _clickHouseConnection;
 
         public ClickHouseDbCommand()
         {
         }
 
-        public ClickHouseDbCommand(ClickHouseDbConnection clickHouseConnection)
+        public ClickHouseDbCommand(ClickHouseConnection clickHouseConnection)
         {
             _clickHouseConnection = clickHouseConnection;
             _parameters = new ClickHouseParameterCollection();
         }
 
-        public ClickHouseDbCommand(ClickHouseDbConnection clickHouseConnection, string text) : this(clickHouseConnection)
+        public ClickHouseDbCommand(ClickHouseConnection clickHouseConnection, string text) : this(clickHouseConnection)
         {
             CommandText = text;
         }
@@ -68,7 +68,7 @@ namespace ClickHouse.Ado
         protected override DbConnection DbConnection
         {
             get => _clickHouseConnection;
-            set => _clickHouseConnection = (ClickHouseDbConnection)value;
+            set => _clickHouseConnection = (ClickHouseConnection)value;
         }
 
         public override CommandType CommandType { get; set; }
@@ -76,7 +76,7 @@ namespace ClickHouse.Ado
 
 #endif
 
-        private void Execute(bool readResponse, ClickHouseDbConnection connection)
+        private void Execute(bool readResponse, ClickHouseConnection connection)
         {
             if (connection.State != ConnectionState.Open)
             {

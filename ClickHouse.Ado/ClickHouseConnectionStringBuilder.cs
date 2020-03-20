@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -13,12 +14,6 @@ namespace ClickHouse.Ado
         internal static readonly string[] EmptyStringArray;
 
         private static readonly Dictionary<string, PropertyInfo> PropertiesByKeyword;
-
-        /// <summary>
-        /// Maps CLR property names (e.g. BufferSize) to their canonical keyword name, which is the
-        /// property's [DisplayName] (e.g. Buffer Size)
-        /// </summary>
-        private static readonly Dictionary<string, string> PropertyNameToCanonicalKeyword;
 
         /// <summary>
         /// Maps each property to its [DefaultValue]
@@ -54,27 +49,18 @@ namespace ClickHouse.Ado
 
 #endif
             PropertiesByKeyword = (from p in source
-                                   let displayName =
-                                       p.GetCustomAttribute<DisplayNameAttribute>().DisplayName.ToUpperInvariant()
-                                   let propertyName = p.Name.ToUpperInvariant()
-                                   from k in from k in new string[1] { displayName }.Concat(
-                                                 (IEnumerable<string>)(!(propertyName != displayName)
-                                                                           ? (object)EmptyStringArray
-                                                                           : (object)new string[1] { propertyName }))
-                                             select new { Property = p, Keyword = k }
-                                   select k).ToDictionary(t => t.Keyword, t => t.Property);
-            PropertyNameToCanonicalKeyword = source.ToDictionary(
-                p => p.Name,
-                (PropertyInfo p) => p.GetCustomAttribute<DisplayNameAttribute>().DisplayName);
+                                   select new { Property = p, Keyword = p.Name.ToUpperInvariant() })
+                .ToDictionary(t => t.Keyword, t => t.Property);
         }
         private void SetValue(string name, string value)
         {
+            var propertyUpper = name.ToUpperInvariant();
 #if FRAMEWORK20 || FRAMEWORK40
             PropertiesByKeyword[name].GetSetMethod()
 #else
-            PropertiesByKeyword[name].SetMethod
+            PropertiesByKeyword[propertyUpper].SetMethod
 #endif
-            .Invoke(this, new[] { Convert.ChangeType(value, PropertiesByKeyword[name].PropertyType) });
+            .Invoke(this, new[] { Convert.ChangeType(value, PropertiesByKeyword[propertyUpper].PropertyType) });
         }
 
         public ClickHouseConnectionStringBuilder()
@@ -136,24 +122,34 @@ namespace ClickHouse.Ado
 
         [ClickHouseConnectionStringProperty]
         public bool Async { get; set; }
+        
         [ClickHouseConnectionStringProperty] 
         public int BufferSize { get; set; } = 4096;
+        
         [ClickHouseConnectionStringProperty] 
         public int ApacheBufferSize { get; set; }
+        
         [ClickHouseConnectionStringProperty] 
         public int SocketTimeout { get; set; } = 1000;
+        
         [ClickHouseConnectionStringProperty] 
         public int ConnectionTimeout { get; set; } = 1000;
+        
         [ClickHouseConnectionStringProperty] 
         public int DataTransferTimeout { get; set; } = 1000;
+        
         [ClickHouseConnectionStringProperty] 
         public int KeepAliveTimeout { get; set; } = 1000;
+        
         [ClickHouseConnectionStringProperty] 
         public int TimeToLiveMillis { get; set; }
+        
         [ClickHouseConnectionStringProperty]
         public int DefaultMaxPerRoute { get; set; }
-        [ClickHouseConnectionStringProperty] 
+
+        [ClickHouseConnectionStringProperty]
         public int MaxTotal { get; set; }
+
         [ClickHouseConnectionStringProperty] 
         public string Host { get; set; }
         [ClickHouseConnectionStringProperty] 

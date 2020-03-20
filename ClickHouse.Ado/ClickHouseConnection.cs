@@ -15,6 +15,7 @@ namespace ClickHouse.Ado
         : DbConnection
 #endif
     {
+        private bool _disposed;
         public ClickHouseConnectionStringBuilder ConnectionSettings { get; private set; }
 
         public ClickHouseConnection()
@@ -34,15 +35,8 @@ namespace ClickHouse.Ado
         private Stream _stream;
         /*private BinaryReader _reader;
         private BinaryWriter _writer;*/
-        internal ProtocolFormatter Formatter { get;
-            set; }
+        internal ProtocolFormatter Formatter { get; set; }
         private NetworkStream _netStream;
-
-        public void Dispose()
-        {
-            if (_tcpClient != null) Close();
-        }
-
         public override void Close()
         {
             /*if (_reader != null)
@@ -87,12 +81,13 @@ namespace ClickHouse.Ado
                 Formatter.Close();
                 Formatter = null;
             }
+            _disposed = true;
         }
 
 
         public override void Open()
         {
-            if(_tcpClient!=null)throw new InvalidOperationException("Connection already open.");
+            if(_tcpClient!=null) throw new InvalidOperationException("Connection already open.");
             _tcpClient=new TcpClient();
             _tcpClient.ReceiveTimeout = ConnectionSettings.SocketTimeout;
             _tcpClient.SendTimeout = ConnectionSettings.SocketTimeout;
@@ -153,6 +148,24 @@ namespace ClickHouse.Ado
         public ClickHouseDbCommand CreateCommand(string text)
         {
             return new ClickHouseDbCommand(this,text);
+        }
+
+        public ClickHouseConnection CloneWith(string connectionString)
+        {
+            CheckDisposed();
+            ClickHouseConnectionStringBuilder csb = new ClickHouseConnectionStringBuilder(connectionString);
+            if (csb.Password == null && ConnectionSettings.Password != null)
+            {
+                csb.Password = ConnectionSettings.Password;
+            }
+            return new ClickHouseConnection(csb);
+        }
+        private void CheckDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(typeof(ClickHouseConnection).Name);
+            }
         }
     }
 }
